@@ -12,7 +12,7 @@ references:
 jobs:
   build:
     docker:
-      - image: circleci/node:10.18
+      - image: circleci/node:10.18.0
     working_directory: ~/repo
     steps:
       - checkout
