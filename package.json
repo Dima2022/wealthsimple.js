@@ -16,10 +16,28 @@
     "prebuild": "rm -rf dist",
     "build": "npm run build:dev && npm run build:prod",
     "build:dev": "webpack --mode development",
-    "build:prod": "webpack --mode production"
+    "build:prod": "webpack --mode production",
+    "prepublishOnly": "yarn build:prod"
   },
   "browser": {
     "fs": false
+  },
+  "files": [
+    "dist/*",
+    "src/*",
+    "README.md"
+  ],
+  "publishConfig": {
+    "registry": "https://nexus.iad.w10external.com/repository/npm-private"
+  },
+  "release": {
+    "plugins": [
+      "@semantic-release/commit-analyzer",
+      "@semantic-release/release-notes-generator",
+      "@semantic-release/npm",
+      "@semantic-release/git",
+      "@semantic-release/github"
+    ]
   },
   "dependencies": {
     "date-fns": "^1.29.0",
