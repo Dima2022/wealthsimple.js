@@ -10,6 +10,19 @@ references:
   parameters: &parameters
 
 jobs:
+  semantic-release:
+    executor: javascript/node
+    steps:
+      - checkout
+      - javascript/attach_code_workspace
+      - javascript/yarn_install_dependencies
+      - run: |
+          npm set _auth "$NEXUS_CIRCLE_CI_TOKEN"
+          export GITHUB_TOKEN="$DEVTOOLS_GITHUB_API_TOKEN"
+          export NPM_TOKEN="$NEXUS_CIRCLE_CI_TOKEN"
+          yarn workspaces run build
+          yarn workspaces run semantic-release -e semantic-release-monorepo-config --npm-publish
+          
   build:
     docker:
       - image: circleci/node:10.18
