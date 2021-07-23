@@ -42,3 +42,10 @@ jobs:
           export NPM_TOKEN="${NEXUS_CIRCLE_CI_TOKEN}"
           npm set _auth "$NPM_TOKEN"
           GITHUB_TOKEN="${DEVTOOLS_GITHUB_API_TOKEN}" yarn run semantic-release
+
+workflows:
+  version: 2
+  build-and-deploy:
+    jobs:
+      - build
+      - deploy
