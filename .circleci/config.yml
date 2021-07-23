@@ -21,3 +21,24 @@ jobs:
       - run: yarn test:all
       # Generate coverage
       - run: yarn test:coverage
+
+  deploy:
+    docker:
+      - image: circleci/node:9.5
+    working_directory: ~/repo
+    steps:
+      - checkout
+      # Download and cache dependencies
+      - restore_cache:
+          keys:
+          - v1-dependencies-{{ checksum "yarn.lock" }}
+      - run: yarn install
+      - save_cache:
+          paths:
+            - node_modules
+          key: v1-dependencies-{{ checksum "yarn.lock" }}
+      - run: yarn build:prod
+      - run: |
+          export NPM_TOKEN="${NEXUS_CIRCLE_CI_TOKEN}"
+          npm set _auth "$NPM_TOKEN"
+          GITHUB_TOKEN="${DEVTOOLS_GITHUB_API_TOKEN}" yarn run semantic-release
