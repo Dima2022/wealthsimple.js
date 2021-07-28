@@ -1,6 +1,7 @@
 const queryString = require('query-string');
 const ApiError = require('./api-error');
 const ApiResponse = require('./api-response');
+const atob = require('atob');
 
 class ApiRequest {
   constructor({ client }) {
@@ -54,6 +55,14 @@ class ApiRequest {
     return `${this.client.baseUrl}/${this.client.apiVersion}${newPath}`;
   }
 
+  parseJwt(token) {
+    try {
+      return JSON.parse(atob(token.split('.')[1]));
+    } catch (e) {
+      return null;
+    }
+  };
+
   // Given a Response object ( https://developer.mozilla.org/en-US/docs/Web/API/Response )
   // either parse it and wrap it in our own ApiResponse class, or throw an ApiError.
   _handleResponse(response) {
@@ -63,7 +72,7 @@ class ApiRequest {
     });
     return response.json()
       .then((json) => {
-        apiResponse.json = json;
+        apiResponse.setJson(json);
       }).catch(() => {
         // Fail silently if response body is not present or malformed JSON:
         apiResponse.json = null;
