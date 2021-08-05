@@ -18,13 +18,9 @@ class ApiResponse {
 
   setJson(json) {
     const parsedToken = this.parseJwt(json['access_token']);
-
     if (parsedToken) {
       this.json = json;
       this.json.identity_canonical_id = parsedToken['sub'];
-      // TODO: fix these hardcoded values
-      this.json.profiles = {"invest":{"default":"user-fh9p1cmem_q"},"tax":{"default":"user-xplu9ghy8kh"},"trade":{"default":"user-lj7a3hzlio4"}};
-      this.json.client_canonical_id = "person-udomfzlo0fdf4q"
     } else {
       this.json = json;
     }

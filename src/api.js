@@ -138,7 +138,6 @@ class Api {
 
   userId() {
     if (this.auth && this.getCurrentProfile) {
-      console.log(this.auth);
       return this.auth.profiles[this.getCurrentProfile()]['default'];
     }
   }
@@ -209,11 +208,20 @@ class Api {
           this.auth.expires_in,
         );
 
+        return response.json.accessToken;
+      })
+      .then((accessToken) => {
+        return this.accessTokenInfo(accessToken)
+      })
+      .then((response) => {
+        this.auth.profiles = response.profiles
+        this.auth.client_canonical_id = response.client_canonical_id
+
         if (this.onAuthSuccess) {
           this.onAuthSuccess(this.auth);
         }
 
-        return response;
+        return { json: this.auth };
       })
       .catch((error) => {
         if (error.response) {
