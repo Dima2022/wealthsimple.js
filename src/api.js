@@ -138,8 +138,9 @@ class Api {
 
   userId() {
     if (this.auth && this.getCurrentProfile) {
-      return this.auth.profiles[this.getCurrentProfile()]['default'];
+      return this.auth.profiles[this.getCurrentProfile()].default;
     }
+    return null;
   }
 
   resourceOwnerId() {
@@ -210,12 +211,10 @@ class Api {
 
         return response.json.accessToken;
       })
-      .then((accessToken) => {
-        return this.accessTokenInfo(accessToken)
-      })
+      .then(accessToken => this.accessTokenInfo(accessToken))
       .then((response) => {
-        this.auth.profiles = response.profiles
-        this.auth.client_canonical_id = response.client_canonical_id
+        this.auth.profiles = response.profiles;
+        this.auth.client_canonical_id = response.client_canonical_id;
 
         if (this.onAuthSuccess) {
           this.onAuthSuccess(this.auth);
@@ -246,8 +245,7 @@ class Api {
   }
 
   revokeAuth() {
-    $log.info('revoking auth inside wealthsimple.js');
-    debugger;
+    console.log('revoking auth inside wealthsimple.js');
     return this.authPromise.then(() => {
       if (this.accessToken()) {
         const body = {
@@ -317,7 +315,7 @@ class Api {
 }
 
 ['get', 'patch', 'put', 'post', 'delete', 'head'].forEach((method) => {
-    Api.prototype[method] = function (path, options = {}) {
+  Api.prototype[method] = function (path, options = {}) {
     // Make sure that constructor's context bootstrapping is complete before a
     // remote call is made
     if (options.ignoreAuthPromise || !this.authPromise) {

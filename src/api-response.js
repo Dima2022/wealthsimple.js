@@ -17,14 +17,14 @@ class ApiResponse {
   }
 
   setJson(json) {
-    const parsedToken = this.parseJwt(json['access_token']);
+    const parsedToken = this.parseJwt(json.access_token);
     if (parsedToken) {
       this.json = json;
-      this.json.identity_canonical_id = parsedToken['sub'];
+      this.json.identity_canonical_id = parsedToken.sub;
     } else {
       this.json = json;
     }
-  };
+  }
 
   parseJwt(token) {
     try {
@@ -32,7 +32,7 @@ class ApiResponse {
     } catch (e) {
       return null;
     }
-  };
+  }
 
   getRateLimit() {
     if (this.hasHeaders('x-ratelimit-limit', 'x-ratelimit-remaining', 'x-ratelimit-reset')) {

@@ -61,7 +61,7 @@ class ApiRequest {
     } catch (e) {
       return null;
     }
-  };
+  }
 
   // Given a Response object ( https://developer.mozilla.org/en-US/docs/Web/API/Response )
   // either parse it and wrap it in our own ApiResponse class, or throw an ApiError.
