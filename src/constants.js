@@ -7,4 +7,5 @@ module.exports = {
   OTP_OPTIONS_HEADER: 'x-wealthsimple-otp-options',
   OTP_PREFERRED_DEVICE_TYPE: 'x-wealthsimple-otp-preferred-device-type',
   OTP_PREFERRED_DEVICE_IDENTIFIER: 'x-wealthsimple-otp-preferred-device-identifier',
+  OTP_AUTHENTICATED_CLAIM_HEADER: 'x-wealthsimple-otp-authenticated-claim',
 };

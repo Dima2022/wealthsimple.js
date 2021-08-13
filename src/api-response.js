@@ -86,6 +86,15 @@ class ApiResponse {
     return otpClaimString;
   }
 
+  getOtpAuthenticatedClaim() {
+    const otpAuthenticatedClaimString = this.headers.get(constants.OTP_AUTHENTICATED_CLAIM_HEADER);
+    if (!otpAuthenticatedClaimString) {
+      return null;
+    }
+
+    return otpAuthenticatedClaimString;
+  }
+
   toString() {
     let message = `Response status: ${this.status}`;
     try {

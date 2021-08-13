@@ -180,6 +180,11 @@ class Api {
       delete attributes.otp;
     }
 
+    if (attributes.otpAuthenticatedClaim) {
+      headers[constants.OTP_AUTHENTICATED_CLAIM_HEADER] = attributes.otpAuthenticatedClaim;
+      delete attributes.otpAuthenticatedClaim;
+    }
+
     if (attributes.otpClaim) {
       headers[constants.OTP_CLAIM_HEADER] = attributes.otpClaim;
       headers['X-WS-Profile'] = 'invest';

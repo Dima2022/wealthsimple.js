@@ -163,6 +163,7 @@ class Wealthsimple {
     return !!(this.auth && typeof this.auth.refresh_token === 'string');
   }
 
+  //TODO: difference between this and the api method.
   authenticate(attributes) {
     const headers = {};
     if (attributes.otp) {
