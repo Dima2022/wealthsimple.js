@@ -1,6 +1,8 @@
 const Wealthsimple = require('./index');
 
 describe('Wealthsimple', () => {
+  const accessToken = 'fake12345';
+  const jwtToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
   let wealthsimple;
   beforeEach(() => {
     wealthsimple = new Wealthsimple({ clientId: 'clientid', env: 'sandbox', apiVersion: 'v1' });
@@ -67,6 +69,33 @@ describe('Wealthsimple', () => {
     });
   });
 
+  describe('currentProfile()', () => {
+    describe('profile is present', () => {
+      it('returns profile', () => {
+        wealthsimple.profile = 'trade';
+        expect(wealthsimple.currentProfile()).toEqual('trade');
+      });
+    });
+
+    describe('profile is not present', () => {
+      beforeEach(() => {
+        wealthsimple.auth = {
+          profiles: {
+            trade: {
+              default: 'user-efg456',
+            },
+            tax: {
+              default: 'user-hij789',
+            },
+          },
+        };
+      });
+      it('returns first profile', () => {
+        expect(wealthsimple.currentProfile()).toEqual('trade');
+      });
+    });
+  });
+
   describe('resourceOwnerId and clientCanonicalId', () => {
     describe('auth is not present', () => {
       beforeEach(() => {
@@ -82,6 +111,7 @@ describe('Wealthsimple', () => {
     describe('auth is present', () => {
       beforeEach(() => {
         wealthsimple.auth = {
+          access_token: accessToken,
           resource_owner_id: 'user-abc123',
           client_canonical_id: 'person-def345',
         };
@@ -90,6 +120,62 @@ describe('Wealthsimple', () => {
       it('returns the IDs', () => {
         expect(wealthsimple.resourceOwnerId()).toEqual('user-abc123');
         expect(wealthsimple.clientCanonicalId()).toEqual('person-def345');
+      });
+    });
+
+    describe('using identity token', () => {
+      beforeEach(() => {
+        wealthsimple.auth = {
+          access_token: jwtToken,
+          resource_owner_id: 'user-abc123',
+          client_canonical_id: 'person-def345',
+          profiles: {
+            invest: {
+              default: 'user-efg456',
+            },
+          },
+        };
+      });
+
+      it('returns the IDs', () => {
+        expect(wealthsimple.resourceOwnerId()).toEqual('user-efg456');
+        expect(wealthsimple.clientCanonicalId()).toEqual('person-def345');
+      });
+    });
+  });
+
+  describe('shouldUseIdentityToken()', () => {
+    describe('useIdentityToken is set', () => {
+      it('returns true when set to true', () => {
+        wealthsimple.useIdentityToken = true;
+        expect(wealthsimple.shouldUseIdentityToken()).toBe(true);
+      });
+
+      it('returns false when set to false and nothing else is set', () => {
+        wealthsimple.useIdentityToken = false;
+        expect(wealthsimple.shouldUseIdentityToken()).toBeFalsy();
+      });
+    });
+
+    describe('auth is present', () => {
+      it('returns true when access token is a jwt', () => {
+        wealthsimple.auth = { access_token: jwtToken };
+        expect(wealthsimple.shouldUseIdentityToken()).toBe(true);
+      });
+
+      it('returns false when access token is a bearer token', () => {
+        wealthsimple.auth = { access_token: accessToken };
+        expect(wealthsimple.shouldUseIdentityToken()).toBeFalsy();
+      });
+    });
+
+    describe('token is present', () => {
+      it('returns true when token passed in is a jwt', () => {
+        expect(wealthsimple.shouldUseIdentityToken(jwtToken)).toBe(true);
+      });
+
+      it('returns false when token passed in is a bearer token', () => {
+        expect(wealthsimple.shouldUseIdentityToken(accessToken)).toBeFalsy();
       });
     });
   });

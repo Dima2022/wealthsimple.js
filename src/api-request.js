@@ -63,7 +63,7 @@ class ApiRequest {
     });
     return response.json()
       .then((json) => {
-        apiResponse.json = json;
+        apiResponse.setJson(json);
       }).catch(() => {
         // Fail silently if response body is not present or malformed JSON:
         apiResponse.json = null;

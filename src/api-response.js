@@ -1,5 +1,6 @@
 const { default: jwtDecode } = require('jwt-decode');
 const constants = require('./constants');
+const atob = require('atob');
 
 class ApiResponse {
   constructor({ headers, status, json }) {
@@ -14,6 +15,24 @@ class ApiResponse {
 
   isSuccess() {
     return this.status >= 200 && this.status < 300;
+  }
+
+  setJson(json) {
+    const parsedToken = this.parseJwt(json.access_token);
+    if (parsedToken) {
+      this.json = json;
+      this.json.identity_canonical_id = parsedToken.sub;
+    } else {
+      this.json = json;
+    }
+  }
+
+  parseJwt(token) {
+    try {
+      return JSON.parse(atob(token.split('.')[1]));
+    } catch (e) {
+      return null;
+    }
   }
 
   getRateLimit() {
@@ -66,6 +85,15 @@ class ApiResponse {
       return null;
     }
     return otpClaimString;
+  }
+
+  getOtpAuthenticatedClaim() {
+    const otpAuthenticatedClaimString = this.headers.get(constants.OTP_AUTHENTICATED_CLAIM_HEADER);
+    if (!otpAuthenticatedClaimString) {
+      return null;
+    }
+
+    return otpAuthenticatedClaimString;
   }
 
   toString() {

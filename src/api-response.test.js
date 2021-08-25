@@ -144,4 +144,22 @@ describe('ApiResponse', () => {
       });
     });
   });
+
+  describe('getOtpAuthenticatedClaim', () => {
+    describe('with otp authenticated claim header', () => {
+      it('returns null', () => {
+        expect(response.getOtpAuthenticatedClaim()).toBe(null);
+      });
+    });
+
+    describe('with otp authenticated claim header', () => {
+      beforeEach(() => {
+        headers['x-wealthsimple-otp-authenticated-claim'] = 'otp-authenticated-claim';
+      });
+
+      it('returns the claim', () => {
+        expect(response.getOtpAuthenticatedClaim()).toEqual('otp-authenticated-claim');
+      });
+    });
+  });
 });

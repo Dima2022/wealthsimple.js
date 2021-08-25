@@ -2,6 +2,7 @@
 
 const snakeCase = require('lodash.snakecase');
 const mapKeys = require('lodash.mapkeys');
+const atob = require('atob');
 const ApiRequest = require('./api-request');
 const ApiError = require('./api-error');
 const constants = require('./constants');
@@ -26,6 +27,7 @@ class Wealthsimple {
     onResponse = null,
     verbose = false,
     deviceId = null,
+    getFallbackProfile = null,
   }) {
     // OAuth client details:
     if (!clientId || typeof clientId !== 'string') {
@@ -79,6 +81,8 @@ class Wealthsimple {
 
     this.request = new ApiRequest({ client: this });
 
+    this.getFallbackProfile = getFallbackProfile;
+
     // Optionally pass in existing OAuth details (access_token + refresh_token)
     // so that the user does not have to be prompted to log in again:
     if (auth) {
@@ -103,8 +107,13 @@ class Wealthsimple {
       });
     }
 
-    return this.get('/oauth/token/info', {
-      headers: { Authorization: `Bearer ${token}` },
+    const headers = { Authorization: `Bearer ${token}` };
+    if (this.shouldUseIdentityToken(token)) {
+      headers['X-WS-Profile'] = this.currentProfile();
+    }
+
+    return this.get(this.tokenInfoUrl(token), {
+      headers,
       ignoreAuthPromise: true,
       checkAuthRefresh: false,
     }).then(response =>
@@ -124,6 +133,35 @@ class Wealthsimple {
     });
   }
 
+  setUseIdentityToken(useIdentityToken) {
+    this.useIdentityToken = useIdentityToken;
+  }
+
+  shouldUseIdentityToken(token = null) {
+    return this.useIdentityToken || (this.auth && this.isJwt(this.auth.access_token)) || (token && this.isJwt(token));
+  }
+
+  isJwt(token) {
+    try {
+      JSON.parse(atob(token.split('.')[1]));
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  tokenInfoUrl(token) {
+    return this.shouldUseIdentityToken(token) ? '/oauth/v2/token/info' : '/oauth/token/info';
+  }
+
+  tokenUrl() {
+    return this.shouldUseIdentityToken() ? '/oauth/v2/token' : '/oauth/token';
+  }
+
+  tokenRevokeUrl() {
+    return this.shouldUseIdentityToken() ? '/oauth/v2/revoke' : '/oauth/revoke';
+  }
+
   accessToken() {
     // info endpoint and POST response have different structures
     return this.auth && this.auth.access_token;
@@ -133,7 +171,25 @@ class Wealthsimple {
     return this.auth && this.auth.refresh_token;
   }
 
+  userId() {
+    if (this.auth) {
+      return this.auth.profiles[this.currentProfile()].default;
+    }
+    return null;
+  }
+
+  currentProfile() {
+    if (this.profile) {
+      return this.profile;
+    }
+    if (this.auth) {
+      if (this.auth.profiles) return Object.keys(this.auth.profiles)[0];
+    }
+    return this.getFallbackProfile();
+  }
+
   resourceOwnerId() {
+    if (this.shouldUseIdentityToken()) return this.userId();
     return this.auth && this.auth.resource_owner_id;
   }
 
@@ -202,7 +258,7 @@ class Wealthsimple {
       client_secret: this.clientSecret,
     };
 
-    return this.post('/oauth/token', { headers, body, checkAuthRefresh })
+    return this.post(this.tokenUrl(), { headers, body, checkAuthRefresh })
       .then((response) => {
         // Save auth details for use in subsequent requests:
         this.auth = response.json;
@@ -213,11 +269,18 @@ class Wealthsimple {
           this.auth.expires_in,
         );
 
+        return response.json.accessToken;
+      })
+      .then(accessToken => this.accessTokenInfo(accessToken))
+      .then((response) => {
+        this.auth.profiles = response.profiles;
+        this.auth.client_canonical_id = response.client_canonical_id;
+
         if (this.onAuthSuccess) {
           this.onAuthSuccess(this.auth);
         }
 
-        return response;
+        return { json: this.auth };
       })
       .catch((error) => {
         if (error.response) {
@@ -249,7 +312,7 @@ class Wealthsimple {
           client_secret: this.clientSecret,
           token: this.accessToken(),
         };
-        return this.post('/oauth/revoke', { body })
+        return this.post(this.tokenRevokeUrl(), { body })
           .then(() => {
             this.auth = null;
 
@@ -287,6 +350,9 @@ class Wealthsimple {
     const executePrimaryRequest = () => {
       if (!headers.Authorization && this.accessToken()) {
         headers.Authorization = `Bearer ${this.accessToken()}`;
+      }
+      if (this.shouldUseIdentityToken()) {
+        headers['X-WS-Profile'] = this.currentProfile();
       }
       return this.request.fetch({
         method, path, headers, query, body,
