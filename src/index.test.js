@@ -124,22 +124,49 @@ describe('Wealthsimple', () => {
     });
 
     describe('using identity token', () => {
-      beforeEach(() => {
-        wealthsimple.auth = {
-          access_token: jwtToken,
-          resource_owner_id: 'user-abc123',
-          client_canonical_id: 'person-def345',
-          profiles: {
-            invest: {
-              default: 'user-efg456',
+      describe('client_canonical_id is present', () => {
+        beforeEach(() => {
+          wealthsimple.auth = {
+            access_token: jwtToken,
+            resource_owner_id: 'user-abc123',
+            client_canonical_id: 'person-def345',
+            profiles: {
+              invest: {
+                default: 'user-efg456',
+              },
             },
-          },
-        };
+          };
+        });
+
+        it('returns the IDs', () => {
+          expect(wealthsimple.resourceOwnerId()).toEqual('user-efg456');
+          expect(wealthsimple.clientCanonicalId()).toEqual('person-def345');
+        });
       });
 
-      it('returns the IDs', () => {
-        expect(wealthsimple.resourceOwnerId()).toEqual('user-efg456');
-        expect(wealthsimple.clientCanonicalId()).toEqual('person-def345');
+      describe('client_canonical_id is not present', () => {
+        beforeEach(() => {
+          wealthsimple.auth = {
+            access_token: jwtToken,
+            resource_owner_id: 'user-abc123',
+            client_canonical_id: null,
+            client_canonical_ids: {
+              invest: {
+                default: 'person-def345',
+              },
+            },
+            profiles: {
+              invest: {
+                default: 'user-efg456',
+              },
+            },
+          };
+        });
+
+        it('returns the IDs', () => {
+          expect(wealthsimple.resourceOwnerId()).toEqual('user-efg456');
+          expect(wealthsimple.clientCanonicalId()).toEqual('person-def345');
+        });
       });
     });
   });

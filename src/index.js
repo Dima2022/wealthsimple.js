@@ -87,7 +87,7 @@ class Wealthsimple {
     // so that the user does not have to be prompted to log in again:
     if (auth) {
       // Checks auth validity on bootstrap
-      this.authPromise = this.accessTokenInfo(auth.access_token).then(() => {
+      this.authPromise = this.accessTokenInfo(auth.access_token, false).then(() => {
         this.auth = auth;
       });
     } else {
@@ -96,7 +96,7 @@ class Wealthsimple {
   }
 
   // TODO: Should this have the side-effect of updating this.auth?
-  accessTokenInfo(accessToken = null) {
+  accessTokenInfo(accessToken = null, withProfileHeader = true) {
     const token = accessToken || this.accessToken();
     if (!token) {
       return new Promise((resolve) => {
@@ -107,19 +107,17 @@ class Wealthsimple {
       });
     }
 
-    const headers = { Authorization: `Bearer ${token}` };
-    if (this.shouldUseIdentityToken(token)) {
-      headers['X-WS-Profile'] = this.currentProfile();
-    }
-
     return this.get(this.tokenInfoUrl(token), {
-      headers,
+      headers: { Authorization: `Bearer ${token}` },
       ignoreAuthPromise: true,
       checkAuthRefresh: false,
-    }).then(response =>
-      // the info endpoint nests auth in a `token` root key
-      response.json,
-    ).catch((error) => {
+      withProfileHeader,
+    }).then((response) => {
+      this.auth.profiles = response.json.profiles;
+      this.auth.client_canonical_ids = response.json.client_canonical_ids;
+
+      return response.json;
+    }).catch((error) => {
       if (!error.response) {
         throw error;
       }
@@ -194,7 +192,12 @@ class Wealthsimple {
   }
 
   clientCanonicalId() {
-    return this.auth && this.auth.client_canonical_id;
+    if (this.auth) {
+      if (this.auth.client_canonical_id) return this.auth.client_canonical_id;
+
+      return this.auth.client_canonical_ids[this.currentProfile()].default;
+    }
+    return null;
   }
 
   isAuthExpired() {
@@ -271,11 +274,8 @@ class Wealthsimple {
 
         return response.json.accessToken;
       })
-      .then(accessToken => this.accessTokenInfo(accessToken))
-      .then((response) => {
-        this.auth.profiles = response.profiles;
-        this.auth.client_canonical_id = response.client_canonical_id;
-
+      .then(accessToken => this.accessTokenInfo(accessToken, false))
+      .then(() => {
         if (this.onAuthSuccess) {
           this.onAuthSuccess(this.auth);
         }
@@ -346,12 +346,13 @@ class Wealthsimple {
     query = {},
     body = null,
     checkAuthRefresh = true,
+    withProfileHeader = true,
   }) {
     const executePrimaryRequest = () => {
       if (!headers.Authorization && this.accessToken()) {
         headers.Authorization = `Bearer ${this.accessToken()}`;
       }
-      if (this.shouldUseIdentityToken()) {
+      if (this.shouldUseIdentityToken() && withProfileHeader) {
         headers['X-WS-Profile'] = this.currentProfile();
       }
       return this.request.fetch({
