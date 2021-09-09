@@ -113,6 +113,7 @@ class Wealthsimple {
       checkAuthRefresh: false,
       withProfileHeader,
     }).then((response) => {
+      this.auth.email = response.json.email;
       this.auth.profiles = response.json.profiles;
       this.auth.client_canonical_ids = response.json.client_canonical_ids;
 
@@ -281,8 +282,10 @@ class Wealthsimple {
       })
       .then((accessToken) => {
         if (attributes.grant_type !== 'client_credentials') {
-          this.accessTokenInfo(accessToken, false);
+          return this.accessTokenInfo(accessToken, false);
         }
+
+        return null;
       })
       .then(() => {
         if (this.onAuthSuccess) {
