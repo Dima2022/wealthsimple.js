@@ -120,15 +120,13 @@ class Wealthsimple {
       this.auth.client_canonical_ids = response.json.client_canonical_ids;
 
       return response.json;
-    })
-    .then((response) => {
+    }).then((response) => {
       if (this.onTokenInfoSuccess) {
         this.onTokenInfoSuccess(this.auth);
       }
-  
+
       return response;
-    })
-    .catch((error) => {
+    }).catch((error) => {
       if (!error.response) {
         throw error;
       }
