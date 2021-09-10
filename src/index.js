@@ -22,6 +22,7 @@ class Wealthsimple {
     baseUrl = null,
     apiVersion = 'v1',
     onAuthSuccess = null,
+    onTokenInfoSuccess = null,
     onAuthRevoke = null,
     onAuthInvalid = null,
     onResponse = null,
@@ -78,6 +79,7 @@ class Wealthsimple {
     this.onAuthRevoke = onAuthRevoke;
     this.onAuthInvalid = onAuthInvalid;
     this.onResponse = onResponse;
+    this.onTokenInfoSuccess = onTokenInfoSuccess;
 
     this.request = new ApiRequest({ client: this });
 
@@ -118,7 +120,15 @@ class Wealthsimple {
       this.auth.client_canonical_ids = response.json.client_canonical_ids;
 
       return response.json;
-    }).catch((error) => {
+    })
+    .then((response) => {
+      if (this.onTokenInfoSuccess) {
+        this.onTokenInfoSuccess(this.auth);
+      }
+  
+      return response;
+    })
+    .catch((error) => {
       if (!error.response) {
         throw error;
       }
