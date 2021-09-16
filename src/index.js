@@ -145,7 +145,8 @@ class Wealthsimple {
   }
 
   shouldUseIdentityToken(token = null) {
-    return this.useIdentityToken || (this.auth && this.isJwt(this.auth.access_token)) || (token && this.isJwt(token));
+    const isJwtToken = (this.auth && this.isJwt(this.auth.access_token)) || (token && this.isJwt(token));
+    return (this.useIdentityToken && (!this.auth || isJwtToken)) || isJwtToken;
   }
 
   isJwt(token) {

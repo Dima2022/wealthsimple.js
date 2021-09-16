@@ -173,18 +173,48 @@ describe('Wealthsimple', () => {
 
   describe('shouldUseIdentityToken()', () => {
     describe('useIdentityToken is set', () => {
-      it('returns true when set to true', () => {
-        wealthsimple.useIdentityToken = true;
-        expect(wealthsimple.shouldUseIdentityToken()).toBe(true);
+      describe('auth is present and is a jwt', () => {
+        it('returns true when useIdentityToken set to true', () => {
+          wealthsimple.auth = { access_token: jwtToken };
+          wealthsimple.useIdentityToken = true;
+          expect(wealthsimple.shouldUseIdentityToken()).toBe(true);
+        });
+
+        it('returns true when token is a jwt and flag set to false', () => {
+          wealthsimple.auth = { access_token: jwtToken };
+          wealthsimple.useIdentityToken = false;
+          expect(wealthsimple.shouldUseIdentityToken()).toBe(true);
+        });
       });
 
-      it('returns false when set to false and nothing else is set', () => {
-        wealthsimple.useIdentityToken = false;
-        expect(wealthsimple.shouldUseIdentityToken()).toBeFalsy();
+      describe('auth is present and is a bearer token', () => {
+        it('returns false even when set to true', () => {
+          wealthsimple.auth = { access_token: accessToken };
+          wealthsimple.useIdentityToken = true;
+          expect(wealthsimple.shouldUseIdentityToken()).toBeFalsy();
+        });
+
+        it('returns false when set to false', () => {
+          wealthsimple.auth = { access_token: accessToken };
+          wealthsimple.useIdentityToken = false;
+          expect(wealthsimple.shouldUseIdentityToken()).toBeFalsy();
+        });
+      });
+
+      describe('auth is not present', () => {
+        it('returns true when set to true', () => {
+          wealthsimple.useIdentityToken = true;
+          expect(wealthsimple.shouldUseIdentityToken()).toBe(true);
+        });
+
+        it('returns false when set to false and nothing else is set', () => {
+          wealthsimple.useIdentityToken = false;
+          expect(wealthsimple.shouldUseIdentityToken()).toBeFalsy();
+        });
       });
     });
 
-    describe('auth is present', () => {
+    describe('useIdentityToken is not set, and auth is set', () => {
       it('returns true when access token is a jwt', () => {
         wealthsimple.auth = { access_token: jwtToken };
         expect(wealthsimple.shouldUseIdentityToken()).toBe(true);
