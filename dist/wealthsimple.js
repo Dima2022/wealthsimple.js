@@ -297,47 +297,55 @@ module.exports = Wealthsimple;
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
-/* WEBPACK VAR INJECTION */(function(Buffer) {
+/* WEBPACK VAR INJECTION */(function(Buffer, module) {
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
 (function (w) {
   "use strict";
 
-  var a2b = w.atob;
-
-  function atob(str) {
+  function findBest(atobNative) {
     // normal window
-    if ('function' === typeof a2b) {
-      return a2b(str);
+    if ('function' === typeof atobNative) {
+      return atobNative;
     }
-    // browserify (web worker)
-    else if ('function' === typeof Buffer) {
-        return new Buffer(str, 'base64').toString('binary');
-      }
-      // ios web worker with base64js
-      else if ('object' === _typeof(w.base64js)) {
-          // bufferToBinaryString
-          // https://github.com/coolaj86/unibabel-js/blob/master/index.js#L50
-          var buf = w.base64js.b64ToByteArray(str);
 
-          return Array.prototype.map.call(buf, function (ch) {
-            return String.fromCharCode(ch);
-          }).join('');
-        }
-        // ios web worker without base64js
-        else {
-            throw new Error("you're probably in an ios webworker. please include use beatgammit's base64-js");
-          }
+    // browserify (web worker)
+    if ('function' === typeof Buffer) {
+      return function atobBrowserify(a) {
+        //!! Deliberately using an API that's deprecated in node.js because
+        //!! this file is for browsers and we expect them to cope with it.
+        //!! Discussion: github.com/node-browser-compat/atob/pull/9
+        return new Buffer(a, 'base64').toString('binary');
+      };
+    }
+
+    // ios web worker with base64js
+    if ('object' === _typeof(w.base64js)) {
+      // bufferToBinaryString
+      // https://git.coolaj86.com/coolaj86/unibabel.js/blob/master/index.js#L50
+      return function atobWebWorker_iOS(a) {
+        var buf = w.base64js.b64ToByteArray(a);
+        return Array.prototype.map.call(buf, function (ch) {
+          return String.fromCharCode(ch);
+        }).join('');
+      };
+    }
+
+    return function () {
+      // ios web worker without base64js
+      throw new Error("You're probably in an old browser or an iOS webworker." + " It might help to include beatgammit's base64-js.");
+    };
   }
 
-  w.atob = atob;
+  var atobBest = findBest(w.atob);
+  w.atob = atobBest;
 
-  if (true) {
-    module.exports = atob;
+  if (( false ? undefined : _typeof(module)) === 'object' && module && module.exports) {
+    module.exports = atobBest;
   }
 })(window);
-/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../buffer/index.js */ "./node_modules/buffer/index.js").Buffer))
+/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../buffer/index.js */ "./node_modules/buffer/index.js").Buffer, __webpack_require__(/*! ./../webpack/buildin/module.js */ "./node_modules/webpack/buildin/module.js")(module)))
 
 /***/ }),
 
@@ -14191,7 +14199,6 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 var queryString = __webpack_require__(/*! query-string */ "./node_modules/query-string/index.js");
 var ApiError = __webpack_require__(/*! ./api-error */ "./src/api-error.js");
 var ApiResponse = __webpack_require__(/*! ./api-response */ "./src/api-response.js");
-var atob = __webpack_require__(/*! atob */ "./node_modules/atob/browser-atob.js");
 
 var ApiRequest = function () {
   function ApiRequest(_ref) {
@@ -14254,15 +14261,6 @@ var ApiRequest = function () {
       }
 
       return this.client.baseUrl + '/' + this.client.apiVersion + newPath;
-    }
-  }, {
-    key: 'parseJwt',
-    value: function parseJwt(token) {
-      try {
-        return JSON.parse(atob(token.split('.')[1]));
-      } catch (e) {
-        return null;
-      }
     }
 
     // Given a Response object ( https://developer.mozilla.org/en-US/docs/Web/API/Response )
@@ -14335,6 +14333,7 @@ var _require = __webpack_require__(/*! jwt-decode */ "./node_modules/jwt-decode/
     jwtDecode = _require.default;
 
 var constants = __webpack_require__(/*! ./constants */ "./src/constants.js");
+var atob = __webpack_require__(/*! atob */ "./node_modules/atob/browser-atob.js");
 
 var ApiResponse = function () {
   function ApiResponse(_ref) {
@@ -14520,7 +14519,9 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 var snakeCase = __webpack_require__(/*! lodash.snakecase */ "./node_modules/lodash.snakecase/index.js");
 var mapKeys = __webpack_require__(/*! lodash.mapkeys */ "./node_modules/lodash.mapkeys/index.js");
+var atob = __webpack_require__(/*! atob */ "./node_modules/atob/browser-atob.js");
 var ApiRequest = __webpack_require__(/*! ./api-request */ "./src/api-request.js");
+var ApiResponse = __webpack_require__(/*! ./api-response */ "./src/api-response.js");
 var ApiError = __webpack_require__(/*! ./api-error */ "./src/api-error.js");
 var constants = __webpack_require__(/*! ./constants */ "./src/constants.js");
 
@@ -14546,6 +14547,8 @@ var Wealthsimple = function () {
         apiVersion = _ref$apiVersion === undefined ? 'v1' : _ref$apiVersion,
         _ref$onAuthSuccess = _ref.onAuthSuccess,
         onAuthSuccess = _ref$onAuthSuccess === undefined ? null : _ref$onAuthSuccess,
+        _ref$onTokenInfoSucce = _ref.onTokenInfoSuccess,
+        onTokenInfoSuccess = _ref$onTokenInfoSucce === undefined ? null : _ref$onTokenInfoSucce,
         _ref$onAuthRevoke = _ref.onAuthRevoke,
         onAuthRevoke = _ref$onAuthRevoke === undefined ? null : _ref$onAuthRevoke,
         _ref$onAuthInvalid = _ref.onAuthInvalid,
@@ -14555,7 +14558,9 @@ var Wealthsimple = function () {
         _ref$verbose = _ref.verbose,
         verbose = _ref$verbose === undefined ? false : _ref$verbose,
         _ref$deviceId = _ref.deviceId,
-        deviceId = _ref$deviceId === undefined ? null : _ref$deviceId;
+        deviceId = _ref$deviceId === undefined ? null : _ref$deviceId,
+        _ref$getFallbackProfi = _ref.getFallbackProfile,
+        getFallbackProfile = _ref$getFallbackProfi === undefined ? null : _ref$getFallbackProfi;
 
     _classCallCheck(this, Wealthsimple);
 
@@ -14608,14 +14613,17 @@ var Wealthsimple = function () {
     this.onAuthRevoke = onAuthRevoke;
     this.onAuthInvalid = onAuthInvalid;
     this.onResponse = onResponse;
+    this.onTokenInfoSuccess = onTokenInfoSuccess;
 
     this.request = new ApiRequest({ client: this });
+
+    this.getFallbackProfile = getFallbackProfile;
 
     // Optionally pass in existing OAuth details (access_token + refresh_token)
     // so that the user does not have to be prompted to log in again:
     if (auth) {
       // Checks auth validity on bootstrap
-      this.authPromise = this.accessTokenInfo(auth.access_token).then(function () {
+      this.authPromise = this.accessTokenInfo(auth.access_token, false).then(function () {
         _this.auth = auth;
       });
     } else {
@@ -14634,6 +14642,7 @@ var Wealthsimple = function () {
       var _this2 = this;
 
       var accessToken = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
+      var withProfileHeader = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
 
       var token = accessToken || this.accessToken();
       if (!token) {
@@ -14645,15 +14654,23 @@ var Wealthsimple = function () {
         });
       }
 
-      return this.get('/oauth/token/info', {
+      return this.get(this.tokenInfoUrl(token), {
         headers: { Authorization: 'Bearer ' + token },
         ignoreAuthPromise: true,
-        checkAuthRefresh: false
+        checkAuthRefresh: false,
+        withProfileHeader: withProfileHeader
       }).then(function (response) {
-        return (
-          // the info endpoint nests auth in a `token` root key
-          response.json
-        );
+        _this2.auth.email = response.json.email;
+        _this2.auth.profiles = response.json.profiles;
+        _this2.auth.client_canonical_ids = response.json.client_canonical_ids;
+
+        return response.json;
+      }).then(function (response) {
+        if (_this2.onTokenInfoSuccess) {
+          _this2.onTokenInfoSuccess(_this2.auth);
+        }
+
+        return response;
       }).catch(function (error) {
         if (!error.response) {
           throw error;
@@ -14668,6 +14685,44 @@ var Wealthsimple = function () {
       });
     }
   }, {
+    key: 'setUseIdentityToken',
+    value: function setUseIdentityToken(useIdentityToken) {
+      this.useIdentityToken = useIdentityToken;
+    }
+  }, {
+    key: 'shouldUseIdentityToken',
+    value: function shouldUseIdentityToken() {
+      var token = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
+
+      var isJwtToken = this.auth && this.isJwt(this.auth.access_token) || token && this.isJwt(token);
+      return this.useIdentityToken && (!this.auth || isJwtToken) || isJwtToken;
+    }
+  }, {
+    key: 'isJwt',
+    value: function isJwt(token) {
+      try {
+        JSON.parse(atob(token.split('.')[1]));
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }
+  }, {
+    key: 'tokenInfoUrl',
+    value: function tokenInfoUrl(token) {
+      return this.shouldUseIdentityToken(token) ? '/oauth/v2/token/info' : '/oauth/token/info';
+    }
+  }, {
+    key: 'tokenUrl',
+    value: function tokenUrl() {
+      return this.shouldUseIdentityToken() ? '/oauth/v2/token' : '/oauth/token';
+    }
+  }, {
+    key: 'tokenRevokeUrl',
+    value: function tokenRevokeUrl() {
+      return this.shouldUseIdentityToken() ? '/oauth/v2/revoke' : '/oauth/revoke';
+    }
+  }, {
     key: 'accessToken',
     value: function accessToken() {
       // info endpoint and POST response have different structures
@@ -14679,14 +14734,39 @@ var Wealthsimple = function () {
       return this.auth && this.auth.refresh_token;
     }
   }, {
+    key: 'userId',
+    value: function userId() {
+      if (this.auth) {
+        return this.auth.profiles[this.currentProfile()].default;
+      }
+      return null;
+    }
+  }, {
+    key: 'currentProfile',
+    value: function currentProfile() {
+      if (this.profile) {
+        return this.profile;
+      }
+      if (this.auth) {
+        if (this.auth.profiles) return Object.keys(this.auth.profiles)[0];
+      }
+      return this.getFallbackProfile();
+    }
+  }, {
     key: 'resourceOwnerId',
     value: function resourceOwnerId() {
+      if (this.shouldUseIdentityToken()) return this.userId();
       return this.auth && this.auth.resource_owner_id;
     }
   }, {
     key: 'clientCanonicalId',
     value: function clientCanonicalId() {
-      return this.auth && this.auth.client_canonical_id;
+      if (this.auth) {
+        if (this.auth.client_canonical_id) return this.auth.client_canonical_id;
+
+        return this.auth.client_canonical_ids[this.currentProfile()].default;
+      }
+      return null;
     }
   }, {
     key: 'isAuthExpired',
@@ -14724,6 +14804,11 @@ var Wealthsimple = function () {
         delete attributes.otp;
       }
 
+      if (attributes.otpAuthenticatedClaim) {
+        headers[constants.OTP_AUTHENTICATED_CLAIM_HEADER] = attributes.otpAuthenticatedClaim;
+        delete attributes.otpAuthenticatedClaim;
+      }
+
       if (attributes.otpClaim) {
         headers[constants.OTP_CLAIM_HEADER] = attributes.otpClaim;
         delete attributes.otpClaim;
@@ -14758,19 +14843,32 @@ var Wealthsimple = function () {
         client_secret: this.clientSecret
       });
 
-      return this.post('/oauth/token', { headers: headers, body: body, checkAuthRefresh: checkAuthRefresh }).then(function (response) {
+      return this.post(this.tokenUrl(), { headers: headers, body: body, checkAuthRefresh: checkAuthRefresh }).then(function (response) {
         // Save auth details for use in subsequent requests:
         _this3.auth = response.json;
+        _this3.authHeaders = response.headers;
 
         // calculate a hard expiry date for proper refresh logic across reload
         _this3.auth.expires_at = addSeconds(_this3.auth.created_at * 1000, // JS operates in milliseconds
         _this3.auth.expires_in);
 
+        return response.json.access_token;
+      }).then(function (accessToken) {
+        if (attributes.grant_type !== 'client_credentials') {
+          return _this3.accessTokenInfo(accessToken, false);
+        }
+
+        return null;
+      }).then(function () {
         if (_this3.onAuthSuccess) {
           _this3.onAuthSuccess(_this3.auth);
         }
 
-        return response;
+        return new ApiResponse({
+          headers: _this3.authHeaders,
+          status: 200,
+          json: _this3.auth
+        });
       }).catch(function (error) {
         if (error.response) {
           throw new ApiError(error.response);
@@ -14807,7 +14905,7 @@ var Wealthsimple = function () {
             client_secret: _this5.clientSecret,
             token: _this5.accessToken()
           };
-          return _this5.post('/oauth/revoke', { body: body }).then(function () {
+          return _this5.post(_this5.tokenRevokeUrl(), { body: body }).then(function () {
             _this5.auth = null;
 
             if (_this5.onAuthRevoke) {
@@ -14848,11 +14946,16 @@ var Wealthsimple = function () {
           _ref2$body = _ref2.body,
           body = _ref2$body === undefined ? null : _ref2$body,
           _ref2$checkAuthRefres = _ref2.checkAuthRefresh,
-          checkAuthRefresh = _ref2$checkAuthRefres === undefined ? true : _ref2$checkAuthRefres;
+          checkAuthRefresh = _ref2$checkAuthRefres === undefined ? true : _ref2$checkAuthRefres,
+          _ref2$withProfileHead = _ref2.withProfileHeader,
+          withProfileHeader = _ref2$withProfileHead === undefined ? true : _ref2$withProfileHead;
 
       var executePrimaryRequest = function executePrimaryRequest() {
         if (!headers.Authorization && _this6.accessToken()) {
           headers.Authorization = 'Bearer ' + _this6.accessToken();
+        }
+        if (_this6.shouldUseIdentityToken() && withProfileHeader) {
+          headers['X-WS-Profile'] = _this6.currentProfile();
         }
         return _this6.request.fetch({
           method: method, path: path, headers: headers, query: query, body: body

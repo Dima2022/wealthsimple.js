@@ -4,6 +4,7 @@ const snakeCase = require('lodash.snakecase');
 const mapKeys = require('lodash.mapkeys');
 const atob = require('atob');
 const ApiRequest = require('./api-request');
+const ApiResponse = require('./api-response');
 const ApiError = require('./api-error');
 const constants = require('./constants');
 
@@ -280,6 +281,7 @@ class Wealthsimple {
       .then((response) => {
         // Save auth details for use in subsequent requests:
         this.auth = response.json;
+        this.authHeaders = response.headers;
 
         // calculate a hard expiry date for proper refresh logic across reload
         this.auth.expires_at = addSeconds(
@@ -301,7 +303,11 @@ class Wealthsimple {
           this.onAuthSuccess(this.auth);
         }
 
-        return { json: this.auth };
+        return new ApiResponse({
+          headers: this.authHeaders,
+          status: 200,
+          json: this.auth,
+        });
       })
       .catch((error) => {
         if (error.response) {
