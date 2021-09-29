@@ -1,6 +1,5 @@
 const { default: jwtDecode } = require('jwt-decode');
 const constants = require('./constants');
-const atob = require('atob');
 
 class ApiResponse {
   constructor({ headers, status, json }) {
@@ -18,7 +17,7 @@ class ApiResponse {
   }
 
   setJson(json) {
-    const parsedToken = this.parseJwt(json.access_token);
+    const parsedToken = json.access_token && this.parseJwt(json.access_token);
     if (parsedToken) {
       this.json = json;
       this.json.identity_canonical_id = parsedToken.sub;
@@ -29,7 +28,7 @@ class ApiResponse {
 
   parseJwt(token) {
     try {
-      return JSON.parse(atob(token.split('.')[1]));
+      return jwtDecode(token);
     } catch (e) {
       return null;
     }

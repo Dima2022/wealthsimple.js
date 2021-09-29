@@ -2,7 +2,7 @@
 
 const snakeCase = require('lodash.snakecase');
 const mapKeys = require('lodash.mapkeys');
-const atob = require('atob');
+const { default: jwtDecode } = require('jwt-decode');
 const ApiRequest = require('./api-request');
 const ApiResponse = require('./api-response');
 const ApiError = require('./api-error');
@@ -152,7 +152,7 @@ class Wealthsimple {
 
   isJwt(token) {
     try {
-      JSON.parse(atob(token.split('.')[1]));
+      jwtDecode(token);
       return true;
     } catch (e) {
       return false;
