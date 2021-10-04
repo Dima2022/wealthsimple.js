@@ -1,19 +1,62 @@
 'use strict';
 
-const snakeCase = require('lodash.snakecase');
-const mapKeys = require('lodash.mapkeys');
-const { default: jwtDecode } = require('jwt-decode');
-const ApiRequest = require('./api-request');
-const ApiResponse = require('./api-response');
-const ApiError = require('./api-error');
-const constants = require('./constants');
+import snakeCase from 'lodash/snakeCase';
+import mapKeys from 'lodash/mapKeys';
+import jwtDecode from 'jwt-decode';
+import ApiRequest from './api-request';
+import ApiResponse from './api-response';
+import ApiError from './api-error';
+import constants from './constants';
 
-const isDate = require('date-fns/is_date');
-const isAfter = require('date-fns/is_after');
-const dateParse = require('date-fns/parse');
-const addSeconds = require('date-fns/add_seconds');
+import isDate from 'date-fns/is_date';
+import isAfter from 'date-fns/is_after';
+import dateParse from 'date-fns/parse';
+import addSeconds from 'date-fns/add_seconds';
 
-class Wealthsimple {
+import {
+  Auth,
+  FetchOptions,
+  FetchWithVerb,
+  HttpMethod,
+  Profile,
+  WealthsimpleOptions,
+} from './types';
+
+export default class Wealthsimple {
+  clientId: string;
+  clientSecret?: string;
+  baseUrl: string;
+  env?: 'development' | 'sandbox' | 'production' | null;
+  verbose: boolean;
+  apiVersion: 'v1' | null;
+  deviceId: string | null;
+  fetchAdapter: (input: RequestInfo, init?: RequestInit | undefined) => Promise<Response>;
+  onAuthSuccess: ((auth: Auth | null | undefined) => void) | null;
+  onAuthRevoke: (() => void) | null;
+  onAuthInvalid: ((response: Record<string | never, any> | null | undefined) => void) | null;
+  onResponse: ((response: ApiResponse) => void) | null;
+  onTokenInfoSuccess: ((auth: Auth) => void) | null;
+  request: ApiRequest;
+  getFallbackProfile: (() => Profile) | null;
+  authPromise: Promise<any>;
+  auth?: Auth | null;
+  useIdentityToken: boolean | undefined;
+  authHeaders?: Headers;
+  profile?: Profile;
+  // @ts-ignore it's defined
+  get: FetchWithVerb;
+  // @ts-ignore it's defined
+  patch: FetchWithVerb;
+  // @ts-ignore it's defined
+  put: FetchWithVerb;
+  // @ts-ignore it's defined
+  post: FetchWithVerb;
+  // @ts-ignore it's defined
+  delete: FetchWithVerb;
+  // @ts-ignore it's defined
+  head: FetchWithVerb;
+  static ApiResponse?: ApiResponse;
+
   constructor({
     clientId,
     clientSecret,
@@ -30,7 +73,7 @@ class Wealthsimple {
     verbose = false,
     deviceId = null,
     getFallbackProfile = null,
-  }) {
+  }: WealthsimpleOptions) {
     // OAuth client details:
     if (!clientId || typeof clientId !== 'string') {
       throw new Error('Please specify a valid OAuth \'clientId\'.');
@@ -42,7 +85,7 @@ class Wealthsimple {
       this.baseUrl = baseUrl;
     } else {
       // API environment (either 'sandbox' or 'production') and version:
-      if (!constants.ENVIRONMENTS.includes(env)) {
+      if (env && !constants.ENVIRONMENTS.includes(env)) {
         throw new Error(`Unrecognized 'env'. Please use one of: ${constants.ENVIRONMENTS.join(', ')}`);
       }
       this.env = env;
@@ -52,7 +95,7 @@ class Wealthsimple {
     // Setting to `true` will add request logging.
     this.verbose = verbose;
 
-    if (!constants.API_VERSIONS.includes(apiVersion)) {
+    if (apiVersion && !constants.API_VERSIONS.includes(apiVersion)) {
       throw new Error(`Unrecognized 'apiVersion'. Please use one of: ${constants.API_VERSIONS.join(', ')}`);
     }
     this.apiVersion = apiVersion;
@@ -90,7 +133,7 @@ class Wealthsimple {
     // so that the user does not have to be prompted to log in again:
     if (auth) {
       // Checks auth validity on bootstrap
-      this.authPromise = this.accessTokenInfo(auth.access_token, false).then(() => {
+      this.authPromise = this.accessTokenInfo(auth.access_token, false)?.then(() => {
         this.auth = auth;
       });
     } else {
@@ -99,10 +142,10 @@ class Wealthsimple {
   }
 
   // TODO: Should this have the side-effect of updating this.auth?
-  accessTokenInfo(accessToken = null, withProfileHeader = true) {
+  accessTokenInfo(accessToken: string | null = null, withProfileHeader = true) {
     const token = accessToken || this.accessToken();
     if (!token) {
-      return new Promise((resolve) => {
+      return new Promise<void>((resolve) => {
         if (this.onAuthInvalid) {
           this.onAuthInvalid({});
         }
@@ -115,19 +158,21 @@ class Wealthsimple {
       ignoreAuthPromise: true,
       checkAuthRefresh: false,
       withProfileHeader,
-    }).then((response) => {
-      this.auth.email = response.json.email;
-      this.auth.profiles = response.json.profiles;
-      this.auth.client_canonical_ids = response.json.client_canonical_ids;
+    }).then((response: ApiResponse) => {
+      if (this.auth) {
+        this.auth.email = response.json?.email;
+        this.auth.profiles = response.json?.profiles;
+        this.auth.client_canonical_ids = response.json?.client_canonical_ids;
+      }
 
       return response.json;
-    }).then((response) => {
+    }).then((response: any) => {
       if (this.onTokenInfoSuccess) {
-        this.onTokenInfoSuccess(this.auth);
+        this.onTokenInfoSuccess(this.auth as Auth);
       }
 
       return response;
-    }).catch((error) => {
+    }).catch((error: ApiError) => {
       if (!error.response) {
         throw error;
       }
@@ -141,16 +186,16 @@ class Wealthsimple {
     });
   }
 
-  setUseIdentityToken(useIdentityToken) {
+  setUseIdentityToken(useIdentityToken: boolean) {
     this.useIdentityToken = useIdentityToken;
   }
 
-  shouldUseIdentityToken(token = null) {
+  shouldUseIdentityToken(token: string | null = null) {
     const isJwtToken = (this.auth && this.isJwt(this.auth.access_token)) || (token && this.isJwt(token));
     return (this.useIdentityToken && (!this.auth || isJwtToken)) || isJwtToken;
   }
 
-  isJwt(token) {
+  isJwt(token: string) {
     try {
       jwtDecode(token);
       return true;
@@ -159,7 +204,7 @@ class Wealthsimple {
     }
   }
 
-  tokenInfoUrl(token) {
+  tokenInfoUrl(token: string) {
     return this.shouldUseIdentityToken(token) ? '/oauth/v2/token/info' : '/oauth/token/info';
   }
 
@@ -182,19 +227,23 @@ class Wealthsimple {
 
   userId() {
     if (this.auth) {
-      return this.auth.profiles[this.currentProfile()].default;
+      const profile = this.currentProfile();
+
+      if (profile) {
+        return this.auth.profiles[profile].default;
+      }
     }
     return null;
   }
 
-  currentProfile() {
+  currentProfile(): Profile | undefined {
     if (this.profile) {
       return this.profile;
     }
     if (this.auth) {
-      if (this.auth.profiles) return Object.keys(this.auth.profiles)[0];
+      if (this.auth.profiles) return Object.keys(this.auth.profiles)[0] as Profile;
     }
-    return this.getFallbackProfile();
+    return this.getFallbackProfile?.();
   }
 
   resourceOwnerId() {
@@ -206,7 +255,10 @@ class Wealthsimple {
     if (this.auth) {
       if (this.auth.client_canonical_id) return this.auth.client_canonical_id;
 
-      return this.auth.client_canonical_ids[this.currentProfile()].default;
+      const profile = this.currentProfile();
+      if (profile) {
+        return this.auth.client_canonical_ids[profile].default;
+      }
     }
     return null;
   }
@@ -233,8 +285,8 @@ class Wealthsimple {
     return !!(this.auth && typeof this.auth.refresh_token === 'string');
   }
 
-  authenticate(attributes) {
-    const headers = {};
+  authenticate(attributes: any) {
+    const headers: Record<string, any> = {};
     if (attributes.otp) {
       headers[constants.OTP_HEADER] = attributes.otp;
       delete attributes.otp;
@@ -272,26 +324,28 @@ class Wealthsimple {
     }
 
     const body = {
-      ...mapKeys(attributes, (v, k) => snakeCase(k)),
+      ...mapKeys(attributes, (_, k) => snakeCase(k)),
       client_id: this.clientId,
       client_secret: this.clientSecret,
     };
 
     return this.post(this.tokenUrl(), { headers, body, checkAuthRefresh })
-      .then((response) => {
+      .then((response: ApiResponse) => {
         // Save auth details for use in subsequent requests:
-        this.auth = response.json;
+        this.auth = response.json as Auth;
         this.authHeaders = response.headers;
 
         // calculate a hard expiry date for proper refresh logic across reload
-        this.auth.expires_at = addSeconds(
-          this.auth.created_at * 1000, // JS operates in milliseconds
-          this.auth.expires_in,
-        );
+        if (this.auth) {
+          this.auth.expires_at = addSeconds(
+            this.auth.created_at * 1000, // JS operates in milliseconds
+            this.auth.expires_in,
+          );
+        }
 
-        return response.json.access_token;
+        return response.json?.access_token;
       })
-      .then((accessToken) => {
+      .then((accessToken: string) => {
         if (attributes.grant_type !== 'client_credentials') {
           return this.accessTokenInfo(accessToken, false);
         }
@@ -309,7 +363,7 @@ class Wealthsimple {
           json: this.auth,
         });
       })
-      .catch((error) => {
+      .catch((error: any) => {
         if (error.response) {
           throw new ApiError(error.response);
         } else {
@@ -349,7 +403,7 @@ class Wealthsimple {
           });
       }
       // Not authenticated
-      return new Promise((resolve) => {
+      return new Promise<void>((resolve) => {
         if (this.onAuthRevoke) {
           this.onAuthRevoke();
         }
@@ -359,7 +413,7 @@ class Wealthsimple {
       // Something went wrong server-side, but that doesn't matter to the client
       // The risk is that the token didnt revoke, but we can still forget about
       // The data here on the client side
-      new Promise((resolve) => {
+      new Promise<void>((resolve) => {
         if (this.onAuthRevoke) {
           this.onAuthRevoke();
         }
@@ -368,13 +422,13 @@ class Wealthsimple {
     ));
   }
 
-  _fetch(method, path, {
+  _fetch(method: HttpMethod, path: string, {
     headers = {},
     query = {},
     body = null,
     checkAuthRefresh = true,
     withProfileHeader = true,
-  }) {
+  }: FetchOptions) {
     const executePrimaryRequest = () => {
       if (!headers.Authorization && this.accessToken()) {
         headers.Authorization = `Bearer ${this.accessToken()}`;
@@ -392,7 +446,7 @@ class Wealthsimple {
       // perform the actual request:
       return this.refreshAuth().then(executePrimaryRequest);
     }
-    return executePrimaryRequest().catch((error) => {
+    return executePrimaryRequest().catch((error: any) => {
       if (error.response && error.response.status === 401 && this.onAuthInvalid) {
         this.onAuthInvalid(error.response.json);
       }
@@ -401,15 +455,13 @@ class Wealthsimple {
   }
 }
 
-['get', 'patch', 'put', 'post', 'delete', 'head'].forEach((method) => {
-  Wealthsimple.prototype[method] = function (path, options = {}) {
+(['get', 'patch', 'put', 'post', 'delete', 'head'] as Array<Lowercase<HttpMethod>>).forEach((method: Lowercase<HttpMethod>) => {
+  Wealthsimple.prototype[method] = function (path: string, options: FetchOptions = {}) {
     // Make sure that constructor's context bootstrapping is complete before a
     // remote call is made
     if (options.ignoreAuthPromise || !this.authPromise) {
-      return this._fetch(method.toUpperCase(), path, options);
+      return this._fetch(method.toUpperCase() as HttpMethod, path, options);
     }
-    return this.authPromise.then(() => this._fetch(method.toUpperCase(), path, options));
+    return this.authPromise.then(() => this._fetch(method.toUpperCase() as HttpMethod, path, options));
   };
 });
-
-module.exports = Wealthsimple;

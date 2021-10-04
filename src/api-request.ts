@@ -1,15 +1,20 @@
-const queryString = require('query-string');
-const ApiError = require('./api-error');
-const ApiResponse = require('./api-response');
+// @ts-ignore idk
+import queryString from 'query-string';
+import ApiError from './api-error';
+import ApiResponse from './api-response';
+import { FetchOptions2 } from './types';
+import Wealthsimple from '.';
 
-class ApiRequest {
-  constructor({ client }) {
+export default class ApiRequest {
+  client: Wealthsimple;
+
+  constructor({ client }: { client: Wealthsimple }) {
     this.client = client;
   }
 
   fetch({
     method, headers = {}, path, query = {}, body = null,
-  }) {
+  }: FetchOptions2) {
     let newHeaders = headers;
     let newPath = path;
     let newBody = body;
@@ -45,7 +50,7 @@ class ApiRequest {
     }).then(this._handleResponse.bind(this));
   }
 
-  urlFor(path) {
+  urlFor(path: string) {
     let newPath = path;
     if (!newPath.startsWith('/')) {
       newPath = `/${newPath}`;
@@ -56,13 +61,13 @@ class ApiRequest {
 
   // Given a Response object ( https://developer.mozilla.org/en-US/docs/Web/API/Response )
   // either parse it and wrap it in our own ApiResponse class, or throw an ApiError.
-  _handleResponse(response) {
+  _handleResponse(response: Response) {
     const apiResponse = new ApiResponse({
       status: response.status,
       headers: response.headers,
     });
     return response.json()
-      .then((json) => {
+      .then((json: Record<string, any>) => {
         apiResponse.setJson(json);
       }).catch(() => {
         // Fail silently if response body is not present or malformed JSON:
@@ -86,10 +91,9 @@ class ApiRequest {
       'X-Wealthsimple-Client': 'wealthsimple.js',
     };
     if (this.client.deviceId) {
+      // @ts-ignore bad
       h['X-WS-Device-ID'] = this.client.deviceId;
     }
     return h;
   }
 }
-
-module.exports = ApiRequest;

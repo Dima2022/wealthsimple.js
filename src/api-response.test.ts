@@ -1,4 +1,4 @@
-const ApiResponse = require('./api-response');
+import ApiResponse from './api-response';
 
 describe('ApiResponse', () => {
   let response;

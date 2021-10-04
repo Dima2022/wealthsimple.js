@@ -1,5 +1,5 @@
 require('dotenv').config();
-const Wealthsimple = require('../src/index');
+import Wealthsimple from '../src/index';
 
 const wealthsimple = new Wealthsimple({
   env: 'sandbox',

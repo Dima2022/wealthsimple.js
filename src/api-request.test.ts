@@ -1,5 +1,5 @@
-const Wealthsimple = require('./index');
-const ApiRequest = require('./api-request');
+import Wealthsimple from '.';
+import ApiRequest from './api-request';
 
 describe('ApiRequest', () => {
   describe('urlFor()', () => {

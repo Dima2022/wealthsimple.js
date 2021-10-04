@@ -1,9 +1,9 @@
-const Wealthsimple = require('./index');
+import Wealthsimple from '.';
 
 describe('Wealthsimple', () => {
   const accessToken = 'fake12345';
   const jwtToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
-  let wealthsimple;
+  let wealthsimple: Wealthsimple;
   beforeEach(() => {
     wealthsimple = new Wealthsimple({ clientId: 'clientid', env: 'sandbox', apiVersion: 'v1' });
   });

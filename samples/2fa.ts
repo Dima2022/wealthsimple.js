@@ -2,8 +2,10 @@
 // You must set EMAIL + PASSWORD in `.env` corresponding to a valid staging user.
 
 require('dotenv').config();
-const prompt = require('prompt-sync')();
-const Wealthsimple = require('../src/index');
+import promptSync from 'prompt-sync';
+import Wealthsimple from '../src/index';
+
+const prompt = promptSync();
 
 const wealthsimple = new Wealthsimple({
   env: 'sandbox',

@@ -1,4 +1,4 @@
-module.exports = {
+export default {
   API_VERSIONS: ['v1'],
   ENVIRONMENTS: ['development', 'sandbox', 'production'],
   OTP_HEADER: 'x-wealthsimple-otp',

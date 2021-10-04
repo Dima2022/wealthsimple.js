@@ -1,8 +1,8 @@
-const ApiError = require('./api-error');
-const ApiResponse = require('./api-response');
+import ApiError from './api-error';
+import ApiResponse from './api-response';
 
 describe('ApiError', () => {
-  let response;
+  let response: ApiResponse | ApiError;
   beforeEach(() => {
     response = new ApiResponse({
       status: 200,
