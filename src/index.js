@@ -188,13 +188,17 @@ class Wealthsimple {
   }
 
   currentProfile() {
+    let profile;
     if (this.profile) {
       return this.profile;
     }
-    if (this.auth) {
-      if (this.auth.profiles) return Object.keys(this.auth.profiles)[0];
+    if (this.getFallbackProfile) {
+      profile = this.getFallbackProfile();
     }
-    return this.getFallbackProfile();
+    if (!profile && this.auth && this.auth.profiles) {
+      return Object.keys(this.auth.profiles)[0];
+    }
+    return profile;
   }
 
   resourceOwnerId() {

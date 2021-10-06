@@ -70,6 +70,19 @@ describe('Wealthsimple', () => {
   });
 
   describe('currentProfile()', () => {
+    beforeEach(() => {
+      wealthsimple.auth = {
+        profiles: {
+          trade: {
+            default: 'user-efg456',
+          },
+          tax: {
+            default: 'user-hij789',
+          },
+        },
+      };
+    });
+
     describe('profile is present', () => {
       it('returns profile', () => {
         wealthsimple.profile = 'trade';
@@ -77,19 +90,19 @@ describe('Wealthsimple', () => {
       });
     });
 
-    describe('profile is not present', () => {
-      beforeEach(() => {
-        wealthsimple.auth = {
-          profiles: {
-            trade: {
-              default: 'user-efg456',
-            },
-            tax: {
-              default: 'user-hij789',
-            },
-          },
-        };
+    describe('fallbackProfile is defined', () => {
+      it('returns fallbackProfile profile', () => {
+        wealthsimple.getFallbackProfile = () => 'tax';
+        expect(wealthsimple.currentProfile()).toEqual('tax');
       });
+
+      it('returns auth if fallbackProfile returns null', () => {
+        wealthsimple.getFallbackProfile = () => null;
+        expect(wealthsimple.currentProfile()).toEqual('trade');
+      });
+    });
+
+    describe('profile is not present', () => {
       it('returns first profile', () => {
         expect(wealthsimple.currentProfile()).toEqual('trade');
       });
