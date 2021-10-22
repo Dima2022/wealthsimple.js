@@ -119,6 +119,12 @@ class Wealthsimple {
       this.auth.email = response.json.email;
       this.auth.profiles = response.json.profiles;
       this.auth.client_canonical_ids = response.json.client_canonical_ids;
+      this.auth.suspended_profiles = response.json.suspended_profiles;
+
+      if (this.auth.profiles && Object.keys(this.auth.profiles).length === 0) {
+        this.auth = null;
+        throw new Error('no_available_users');
+      }
 
       return response.json;
     }).then((response) => {
