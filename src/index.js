@@ -342,40 +342,25 @@ class Wealthsimple {
   }
 
   revokeAuth() {
-    return this.authPromise.then(() => {
-      if (this.accessToken()) {
-        const body = {
-          client_id: this.clientId,
-          client_secret: this.clientSecret,
-          token: this.accessToken(),
-        };
-        return this.post(this.tokenRevokeUrl(), { body })
-          .then(() => {
-            this.auth = null;
+    const accessToken = this.accessToken();
+    const body = {
+      client_id: this.clientId,
+      client_secret: this.clientSecret,
+      token: accessToken,
+    };
+    const tokenRevokeUrl = this.tokenRevokeUrl();
 
-            if (this.onAuthRevoke) {
-              this.onAuthRevoke();
-            }
-          });
-      }
-      // Not authenticated
-      return new Promise((resolve) => {
-        if (this.onAuthRevoke) {
-          this.onAuthRevoke();
-        }
-        resolve();
-      });
-    }).catch(() => (
-      // Something went wrong server-side, but that doesn't matter to the client
-      // The risk is that the token didnt revoke, but we can still forget about
-      // The data here on the client side
-      new Promise((resolve) => {
-        if (this.onAuthRevoke) {
-          this.onAuthRevoke();
-        }
-        resolve();
-      })
-    ));
+    this.auth = null;
+    if (this.onAuthRevoke) {
+      this.onAuthRevoke();
+    }
+
+    if (accessToken) {
+      return this.post(tokenRevokeUrl, { body });
+    }
+    return new Promise((resolve) => {
+      resolve();
+    });
   }
 
   _fetch(method, path, {

@@ -12611,6 +12611,12 @@ var Wealthsimple = function () {
         _this2.auth.email = response.json.email;
         _this2.auth.profiles = response.json.profiles;
         _this2.auth.client_canonical_ids = response.json.client_canonical_ids;
+        _this2.auth.suspended_profiles = response.json.suspended_profiles;
+
+        if (_this2.auth.profiles && Object.keys(_this2.auth.profiles).length === 0) {
+          _this2.auth = null;
+          throw new Error('no_available_users');
+        }
 
         return response.json;
       }).then(function (response) {
@@ -12692,13 +12698,17 @@ var Wealthsimple = function () {
   }, {
     key: 'currentProfile',
     value: function currentProfile() {
+      var profile = void 0;
       if (this.profile) {
         return this.profile;
       }
-      if (this.auth) {
-        if (this.auth.profiles) return Object.keys(this.auth.profiles)[0];
+      if (this.getFallbackProfile) {
+        profile = this.getFallbackProfile();
       }
-      return this.getFallbackProfile();
+      if (!profile && this.auth && this.auth.profiles) {
+        return Object.keys(this.auth.profiles)[0];
+      }
+      return profile;
     }
   }, {
     key: 'resourceOwnerId',
@@ -12846,40 +12856,38 @@ var Wealthsimple = function () {
     value: function revokeAuth() {
       var _this5 = this;
 
-      return this.authPromise.then(function () {
-        if (_this5.accessToken()) {
-          var body = {
-            client_id: _this5.clientId,
-            client_secret: _this5.clientSecret,
-            token: _this5.accessToken()
-          };
-          return _this5.post(_this5.tokenRevokeUrl(), { body: body }).then(function () {
-            _this5.auth = null;
+      if (this.accessToken()) {
+        var body = {
+          client_id: this.clientId,
+          client_secret: this.clientSecret,
+          token: this.accessToken()
+        };
+        return this.post(this.tokenRevokeUrl(), { body: body }).then(function () {
+          _this5.auth = null;
 
-            if (_this5.onAuthRevoke) {
-              _this5.onAuthRevoke();
-            }
-          });
-        }
-        // Not authenticated
-        return new Promise(function (resolve) {
           if (_this5.onAuthRevoke) {
             _this5.onAuthRevoke();
           }
-          resolve();
+        }).catch(function () {
+          return (
+            // Something went wrong server-side, but that doesn't matter to the client
+            // The risk is that the token didnt revoke, but we can still forget about
+            // The data here on the client side
+            new Promise(function (resolve) {
+              if (_this5.onAuthRevoke) {
+                _this5.onAuthRevoke();
+              }
+              resolve();
+            })
+          );
         });
-      }).catch(function () {
-        return (
-          // Something went wrong server-side, but that doesn't matter to the client
-          // The risk is that the token didnt revoke, but we can still forget about
-          // The data here on the client side
-          new Promise(function (resolve) {
-            if (_this5.onAuthRevoke) {
-              _this5.onAuthRevoke();
-            }
-            resolve();
-          })
-        );
+      }
+      // Not authenticated
+      return new Promise(function (resolve) {
+        if (_this5.onAuthRevoke) {
+          _this5.onAuthRevoke();
+        }
+        resolve();
       });
     }
   }, {
