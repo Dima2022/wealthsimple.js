@@ -22,6 +22,3 @@ jobs:
 
       - name: Test
         run: yarn run test:all
-
-      - name: Generate coverage
-        run: yarn run test:coverage
