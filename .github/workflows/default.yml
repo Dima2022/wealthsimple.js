@@ -1,0 +1,27 @@
+name: Default
+
+on: push
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  preflight_check:
+    name: Preflight Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/setup-node@v2
+        with:
+          node-version: '9'
+
+      - name: Install dependencies
+        run: yarn install
+
+      - name: Test
+        run: yarn run test:all
+
+      - name: Generate coverage
+        run: yarn run test:coverage
